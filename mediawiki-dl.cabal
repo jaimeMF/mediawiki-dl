@@ -1,5 +1,8 @@
 Name:              mediawiki-dl
 Version:           0.0
+License:           MIT
+License-File:      LICENSE
+Author:            Jaime Marquínez Ferrándiz <jaime.marquinez.ferrandiz@gmail.com>
 Build-type:        Simple
 Cabal-Version:     >= 1.8
 
