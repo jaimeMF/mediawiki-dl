@@ -1,0 +1,23 @@
+Name:              mediawiki-dl
+Version:           0.0
+Build-type:        Simple
+Cabal-Version:     >= 1.8
+
+Library
+  Hs-Source-Dirs:  src
+  Exposed-Modules: MediaWiki,
+                   MediaWiki.Wiki,
+                   MediaWiki.Article
+  Other-Modules:   MediaWiki.Utils
+  build-depends:   base,
+                   pandoc,
+                   json,
+                   HTTP,
+                   text
+
+executable mediawiki-dl
+  Hs-Source-Dirs:  .
+  Main-Is:         mediawiki-dl.hs
+  Build-Depends:   base,
+                   mediawiki-dl,
+                   pandoc
