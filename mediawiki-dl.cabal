@@ -10,7 +10,8 @@ Library
   Hs-Source-Dirs:  src
   Exposed-Modules: MediaWiki,
                    MediaWiki.Wiki,
-                   MediaWiki.Article
+                   MediaWiki.Article,
+                   MediaWiki.Image
   Other-Modules:   MediaWiki.Utils
   build-depends:   base,
                    pandoc,

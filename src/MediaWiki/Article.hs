@@ -12,11 +12,12 @@ import Data.Text (splitOn, pack, unpack)
 
 import MediaWiki.Wiki
 import MediaWiki.Utils
+import MediaWiki.Image
 
 data ArticleReference = ArticleReference { wiki :: Wiki, title :: String }
     deriving (Show, Read)
 
-data Article = Article {reference :: ArticleReference, source :: Pandoc}
+data Article = Article {reference :: ArticleReference, source :: Pandoc, images :: [Image]} deriving Show
 
 articleReferenceFromString :: String -> ArticleReference
 articleReferenceFromString art_spec = ArticleReference wiki title
@@ -25,22 +26,27 @@ articleReferenceFromString art_spec = ArticleReference wiki title
           wiki = wikimediaFromList wiki_spec
 
 
-apiQuery title = urlEncodeVars [("format", "json"),
-                                ("action", "query"),
-                                ("prop", "revisions"),
-                                ("rvprop", "content"),
-                                ("titles", title)]
+articleApiQuery title = urlEncodeVars [("format", "json"),
+                                       ("action", "query"),
+                                       ("titles", title),
+                                       ("prop", "revisions|images"),
+                                       ("rvprop", "content"),
+                                       ("imlimit", "500")]
 
-apiURL :: ArticleReference -> Url
-apiURL article = (baseWikiURL $ wiki article) ++ "/w/api.php?" ++ (apiQuery $ title article)
+articleApiURL :: ArticleReference -> Url
+articleApiURL article = (baseWikiURL $ wiki article) ++ "/w/api.php?" ++ (articleApiQuery $ title article)
 
-articleSourceFromJSON :: Result (JSObject JSValue) -> String
-articleSourceFromJSON (Ok json) = fromJSString content
-    where (Ok pages) = valFromObj "query" json >>= valFromObj "pages" :: Result (JSObject JSValue)
-          (revision, page) = head $ fromJSObject pages
-          (JSObject page_obj) = page
-          (Ok content) = fmap (head) (valFromObj "revisions" page_obj) >>= valFromObj "*"
+articleComponentsFromJSON :: Result (JSObject JSValue) -> (String, Pandoc, [String])
+articleComponentsFromJSON (Ok json) = (real_title, readMediaWiki def $ content , images_names)
+    where (Ok pages) = valFromObj "query" json >>= valFromObj "pages"
+          (revision, (JSObject page)) = head $ fromJSObject pages
+          (Ok real_title) = valFromObj "title" page
+          (Ok content) = fmap head (valFromObj "revisions" page) >>= valFromObj "*"
+          imagesNames images_array = [let (Ok image_name) = fmap fromJSString $ valFromObj "title" a in image_name | a <- images_array]
+          (Ok images_names) = fmap imagesNames (valFromObj "images" page )
 
-getArticle article_ref = fmap ((\source -> Article article_ref source) .build_article) json_string
-    where json_string = getPageContent $ apiURL article_ref
-          build_article = (readMediaWiki def) . articleSourceFromJSON . decode
+getArticle :: ArticleReference -> IO Article
+getArticle article_ref@(ArticleReference wiki' _) = do
+    (real_title ,source, images_names) <- fmap (articleComponentsFromJSON . decode) $ getPageContent $ articleApiURL article_ref
+    let real_article_ref = ArticleReference wiki' real_title
+    fmap (Article real_article_ref source) $ images_names `getImagesFrom` (wiki article_ref)
