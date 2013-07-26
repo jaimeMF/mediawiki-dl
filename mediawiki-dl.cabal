@@ -11,17 +11,20 @@ Library
   Exposed-Modules: MediaWiki,
                    MediaWiki.Wiki,
                    MediaWiki.Article,
-                   MediaWiki.Image
+                   MediaWiki.Image,
+                   MediaWiki.Downloader
   Other-Modules:   MediaWiki.Utils
   build-depends:   base,
                    pandoc,
                    json,
                    HTTP,
-                   text
+                   text,
+                   bytestring,
+                   network,
+                   filepath
 
 executable mediawiki-dl
   Hs-Source-Dirs:  .
   Main-Is:         mediawiki-dl.hs
   Build-Depends:   base,
-                   mediawiki-dl,
-                   pandoc
+                   mediawiki-dl
