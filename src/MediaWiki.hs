@@ -8,6 +8,7 @@ module MediaWiki
 , Image(..)
 , downloadArticle
 , downloadArticleReference
+, OutputFileFormat(..)
 ) where
 
 import MediaWiki.Wiki

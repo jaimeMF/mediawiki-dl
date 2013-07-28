@@ -37,7 +37,7 @@ articleApiURL :: ArticleReference -> Url
 articleApiURL article = (baseWikiURL $ wiki article) ++ "/w/api.php?" ++ (articleApiQuery $ title article)
 
 articleComponentsFromJSON :: Result (JSObject JSValue) -> (String, Pandoc, [String])
-articleComponentsFromJSON (Ok json) = (real_title, readMediaWiki def $ content , images_names)
+articleComponentsFromJSON (Ok json) = (real_title, readMediaWiki def content , images_names)
     where (Ok pages) = valFromObj "query" json >>= valFromObj "pages"
           (revision, (JSObject page)) = head $ fromJSObject pages
           (Ok real_title) = valFromObj "title" page
