@@ -3,6 +3,7 @@ module MediaWiki.Article
 , Article(..)
 , articleReferenceFromString
 , getArticle
+, getArticleWithRenderedTemplates
 ) where
 
 import Network.HTTP (urlEncodeVars)
@@ -33,8 +34,15 @@ articleApiQuery title = urlEncodeVars [("format", "json"),
                                        ("rvprop", "content"),
                                        ("imlimit", "500")]
 
+templateApiQuery title template = urlEncodeVars [("format", "json"),
+                                                 ("action", "parse"),
+                                                 ("title", title),
+                                                 ("text", template)]
+
 articleApiURL :: ArticleReference -> Url
 articleApiURL article = (baseWikiURL $ wiki article) ++ "/w/api.php?" ++ (articleApiQuery $ title article)
+
+templateApiURL article template = (baseWikiApiURL $ wiki article) ++ (templateApiQuery (title article) template)
 
 articleComponentsFromJSON :: Result (JSObject JSValue) -> (String, Pandoc, [String])
 articleComponentsFromJSON (Ok json) = (real_title, readMediaWiki def content , images_names)
@@ -50,3 +58,20 @@ getArticle article_ref@(ArticleReference wiki' _) = do
     (real_title ,source, images_names) <- fmap (articleComponentsFromJSON . decode) $ getPageContent $ articleApiURL article_ref
     let real_article_ref = ArticleReference wiki' real_title
     fmap (Article real_article_ref source) $ images_names `getImagesFrom` (wiki article_ref)
+
+
+templateFromJSON json = template
+    where (Ok (Pandoc _ template)) = fmap (readHtml def . fromJSString) $ valFromObj "*" =<< valFromObj "text" =<< valFromObj "parse" json
+
+getTemplate article template_string = do
+    response <- getPageContent $ templateApiURL article template_string
+    let (Ok temp) =  fmap templateFromJSON $ decode response
+    return temp 
+
+getRenderedTemplate art (RawBlock t temp) = getTemplate (reference art) temp
+getRenderedTemplate _ b = return [b]
+
+getArticleWithRenderedTemplates :: Article -> IO Article
+getArticleWithRenderedTemplates art  = fmap (\x -> art {source=(Pandoc meta x)}) new_b
+    where (Pandoc meta blocks) = source art
+          new_b = fmap (foldl (\acc bls -> acc ++ bls) []) $ sequence [getRenderedTemplate art b | b <- blocks]

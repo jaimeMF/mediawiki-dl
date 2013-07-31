@@ -5,6 +5,7 @@ module MediaWiki
 , Wiki (..)
 , wikipedia
 , getArticle
+, getArticleWithRenderedTemplates
 , Image(..)
 , downloadArticle
 , downloadArticleReference
