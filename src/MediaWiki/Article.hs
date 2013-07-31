@@ -66,12 +66,12 @@ templateFromJSON json = template
 getTemplate article template_string = do
     response <- getPageContent $ templateApiURL article template_string
     let (Ok temp) =  fmap templateFromJSON $ decode response
-    return temp 
+    return temp
 
-getRenderedTemplate art (RawBlock t temp) = getTemplate (reference art) temp
-getRenderedTemplate _ b = return [b]
+getRenderedTemplate :: Article -> [Block] -> IO [Block]
+getRenderedTemplate art ((RawBlock t temp):bs) = getTemplate (reference art) temp >>= \x -> fmap (x++) (getRenderedTemplate art bs)
+getRenderedTemplate art (b:bs) = fmap ([b]++) (getRenderedTemplate art bs)
+getRenderedTemplate art [] = return []
 
 getArticleWithRenderedTemplates :: Article -> IO Article
-getArticleWithRenderedTemplates art  = fmap (\x -> art {source=(Pandoc meta x)}) new_b
-    where (Pandoc meta blocks) = source art
-          new_b = fmap (foldl (\acc bls -> acc ++ bls) []) $ sequence [getRenderedTemplate art b | b <- blocks]
+getArticleWithRenderedTemplates art  = fmap (\x -> art {source=x}) $ bottomUpM (getRenderedTemplate art) $ source art
