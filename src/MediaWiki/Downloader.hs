@@ -2,10 +2,14 @@ module MediaWiki.Downloader
 ( downloadArticle
 , downloadArticleReference
 , OutputFileFormat(..)
+, DownloadOptions(..)
+, def
 ) where
 
 import System.FilePath (addExtension)
 import Data.List (stripPrefix)
+import Data.Default
+import Control.Monad
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as Bl
 import Text.Pandoc (writeMarkdown, writeHtmlString, writeEPUB, def, WriterOptions(..), EPUBVersion(..), getDefaultTemplate)
@@ -37,6 +41,17 @@ savers = [
     ,(EPUB, (saveEPUB, "epub"))
     ]
 
+data DownloadOptions = DownloadOptions
+    { outputFormat :: OutputFileFormat
+    , downloadResources :: Bool
+    } deriving Show
+
+instance Default DownloadOptions where
+    def = DownloadOptions { outputFormat = EPUB
+                          , downloadResources = True
+                          }
+
+
 downloadImage :: Image -> IO ()
 downloadImage img = do
     let i_url = url img
@@ -47,17 +62,21 @@ downloadImage img = do
     getBinaryContent i_url >>= B.writeFile final_name
     return ()
 
-downloadArticle :: Article -> OutputFileFormat -> IO ()
-downloadArticle article out_f = do
-    let Just (saver, ext) = out_f `lookup` savers
-        file_name = (title $ reference article) `addExtension` ext
+downloadArticleResources article = do
     putStrLn $ "Downloading " ++ (show $ length $ images article) ++ " additional files"
     sequence $ map downloadImage $ images article
+    return ()
+
+downloadArticle :: Article -> DownloadOptions -> IO ()
+downloadArticle article options = do
+    let Just (saver, ext) = (outputFormat options) `lookup` savers
+        file_name = (title $ reference article) `addExtension` ext
+    when (downloadResources options) $ downloadArticleResources article 
     putStrLn $ "Saving article to " ++ (show file_name)
     saver file_name article
     return ()
 
-downloadArticleReference :: ArticleReference -> OutputFileFormat -> IO ()
-downloadArticleReference art_ref out_f = do
+downloadArticleReference :: ArticleReference -> DownloadOptions -> IO ()
+downloadArticleReference art_ref downloadOptions = do
     putStrLn $ "Getting information for " ++ (show $ title art_ref)
-    getArticle art_ref >>= flip downloadArticle out_f
+    getArticle art_ref >>= flip downloadArticle downloadOptions

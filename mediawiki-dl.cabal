@@ -21,7 +21,8 @@ Library
                    text,
                    bytestring,
                    network,
-                   filepath
+                   filepath,
+                   data-default
 
 executable mediawiki-dl
   Hs-Source-Dirs:  .

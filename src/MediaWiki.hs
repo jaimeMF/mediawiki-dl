@@ -7,9 +7,7 @@ module MediaWiki
 , getArticle
 , getArticleWithRenderedTemplates
 , Image(..)
-, downloadArticle
-, downloadArticleReference
-, OutputFileFormat(..)
+, module MediaWiki.Downloader
 ) where
 
 import MediaWiki.Wiki

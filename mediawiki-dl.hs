@@ -2,7 +2,7 @@ module Main where
 
 import System.Environment
 
-import MediaWiki (downloadArticleReference, articleReferenceFromString, Article(..), OutputFileFormat (..))
+import MediaWiki (downloadArticleReference, articleReferenceFromString, OutputFileFormat (..), DownloadOptions(..), def)
 
 main = do
     article_string:rest <- getArgs
@@ -13,5 +13,6 @@ main = do
                 "html" -> HTML
                 "epub" -> EPUB
                 _ -> error "Unsoported output format"
-    downloadArticleReference (articleReferenceFromString article_string) writer
+        options = def {outputFormat = writer}
+    downloadArticleReference (articleReferenceFromString article_string) options
     return ()
