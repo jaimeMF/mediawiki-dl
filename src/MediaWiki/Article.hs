@@ -6,7 +6,8 @@ module MediaWiki.Article
 , getArticleWithRenderedTemplates
 ) where
 
-import Network.HTTP (urlEncodeVars)
+import Network.HTTP (urlEncodeVars, urlDecode)
+import Network.URI
 import Text.JSON
 import Text.Pandoc
 import Data.Text (splitOn, pack, unpack)
@@ -20,11 +21,24 @@ data ArticleReference = ArticleReference { wiki :: Wiki, title :: String }
 
 data Article = Article {reference :: ArticleReference, source :: Pandoc, images :: [Image]} deriving Show
 
-articleReferenceFromString :: String -> ArticleReference
-articleReferenceFromString art_spec = ArticleReference wiki title
+articleReferenceFromSpec art_spec = ArticleReference wiki title
     where parts = reverse $ map unpack $ splitOn (pack ":") $ pack art_spec
           title:wiki_spec = parts
           wiki = wikimediaFromList wiki_spec
+
+articleReferenceFromURI uri = ArticleReference wiki article_title
+    where Just domain = fmap uriRegName $ uriAuthority uri
+          wiki = WikiNamed domain
+          -- TODO: Check if the path really starts with "/wiki/"
+          article_title = urlDecode $ drop 6 $ uriPath uri
+
+articleReferenceFromString :: String -> ArticleReference
+articleReferenceFromString string = case (parseAbsoluteURI string) of
+    Nothing -> articleReferenceFromSpec string
+    (Just uri) -> case uriScheme uri of
+            "http:" -> articleReferenceFromURI uri
+            "https:" -> articleReferenceFromURI uri
+            _ -> articleReferenceFromSpec string
 
 
 articleApiQuery title = urlEncodeVars [("format", "json"),
