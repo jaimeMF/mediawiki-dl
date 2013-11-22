@@ -7,6 +7,7 @@ module MediaWiki.Downloader
 ) where
 
 import System.FilePath (addExtension)
+import System.Directory (doesFileExist, renameFile)
 import Data.List (stripPrefix)
 import Data.Default
 import Control.Monad
@@ -51,6 +52,16 @@ instance Default DownloadOptions where
                           , downloadResources = True
                           }
 
+-- |Download using an intermediate temporary file if the file doesn't exist
+downloadUsingTemp final_name url = do
+    let temp_file = addExtension final_name "temp"
+    f_exists <- doesFileExist final_name
+    if f_exists
+        then putStrLn $ (show final_name) ++ " has already been downloaded"
+        else do
+            putStrLn $ "Downloading " ++ show final_name
+            getBinaryContent url >>= B.writeFile temp_file
+            renameFile temp_file final_name
 
 downloadImage :: Image -> IO ()
 downloadImage img = do
@@ -58,8 +69,7 @@ downloadImage img = do
         final_name = case ("File:" `stripPrefix` name img) of
             Just name -> name
             Nothing -> name img
-    putStrLn $ "Downloading " ++ show final_name
-    getBinaryContent i_url >>= B.writeFile final_name
+    downloadUsingTemp final_name i_url
     return ()
 
 downloadArticleResources article = do

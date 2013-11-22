@@ -22,6 +22,7 @@ Library
                    bytestring,
                    network,
                    filepath,
+                   directory,
                    data-default
 
 executable mediawiki-dl
