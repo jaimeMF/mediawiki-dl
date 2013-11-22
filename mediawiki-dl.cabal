@@ -15,7 +15,7 @@ Library
                    MediaWiki.Downloader
   Other-Modules:   MediaWiki.Utils
   build-depends:   base,
-                   pandoc >= 1.10,
+                   pandoc >= 1.12,
                    json,
                    HTTP,
                    text,
