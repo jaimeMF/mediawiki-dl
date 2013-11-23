@@ -46,7 +46,8 @@ articleApiQuery title = urlEncodeVars [("format", "json"),
                                        ("titles", title),
                                        ("prop", "revisions|images"),
                                        ("rvprop", "content"),
-                                       ("imlimit", "500")]
+                                       ("imlimit", "500"),
+                                       ("redirects", "")]
 
 templateApiQuery title template = urlEncodeVars [("format", "json"),
                                                  ("action", "parse"),
