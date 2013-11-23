@@ -10,11 +10,13 @@ import MediaWiki (downloadArticleReference, articleReferenceFromString, OutputFi
 
 data Opt = Opt
     { optOutputFormat :: String
+    , debug :: Bool
     }
     deriving (Show)
 
 defaultOpts = Opt
     { optOutputFormat = "md"
+    , debug = False
     }
 
 usageHeader = "Usage: mediawiki-dl [OPTION...] article"
@@ -29,7 +31,11 @@ options =
                 "FORMAT"
              )
              "output format"
-      
+    , Option "" ["debug"]
+             (NoArg
+                (\opt -> return opt {debug = True})
+             )
+             "turn on debug mode"
     , Option "h" ["help"]
              (NoArg
                 (\_ -> do
@@ -40,11 +46,18 @@ options =
             "help"
     ]
 
+optsToDlOpts opts = dlOptions
+    where writer = case (optOutputFormat opts) of
+                "md" -> Markdown
+                "html" -> HTML
+                "epub" -> EPUB
+                _ -> error "Unsoported output format"
+          dlOptions = def {outputFormat = writer, debugMode = debug opts}
+
 main = do
     (actions, args, errors) <- fmap (getOpt Permute options) getArgs
 
     opts <- foldl (>>=) (return defaultOpts) actions
-    let Opt {optOutputFormat = outputFormat} = opts
 
     unless (null errors) $ do
         putStrLn "Error on arguments parsing:"
@@ -56,11 +69,5 @@ main = do
         putStrLn "no article given"
         exitFailure
 
-    let writer = case outputFormat of
-                "md" -> Markdown
-                "html" -> HTML
-                "epub" -> EPUB
-                _ -> error "Unsoported output format"
-        dlOptions = def {outputFormat = writer}
-    downloadArticleReference (articleReferenceFromString $ head args) dlOptions
+    downloadArticleReference (articleReferenceFromString $ head args) $ optsToDlOpts opts
     return ()

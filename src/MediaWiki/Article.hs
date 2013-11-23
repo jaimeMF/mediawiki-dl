@@ -19,7 +19,7 @@ import MediaWiki.Image
 data ArticleReference = ArticleReference { wiki :: Wiki, title :: String }
     deriving (Show, Read)
 
-data Article = Article {reference :: ArticleReference, source :: Pandoc, images :: [Image]} deriving Show
+data Article = Article {reference :: ArticleReference, source :: Pandoc, images :: [Image], wikisource :: String} deriving Show
 
 articleReferenceFromSpec art_spec = ArticleReference wiki title
     where parts = reverse $ map unpack $ splitOn (pack ":") $ pack art_spec
@@ -58,20 +58,20 @@ articleApiURL article = (baseWikiURL $ wiki article) ++ "/w/api.php?" ++ (articl
 
 templateApiURL article template = (baseWikiApiURL $ wiki article) ++ (templateApiQuery (title article) template)
 
-articleComponentsFromJSON :: Result (JSObject JSValue) -> (String, Pandoc, [String])
-articleComponentsFromJSON (Ok json) = (real_title, readMediaWiki def content , images_names)
+articleComponentsFromJSON :: Result (JSObject JSValue) -> (String, String, [String])
+articleComponentsFromJSON (Ok json) = (real_title, source, images_names)
     where (Ok pages) = valFromObj "query" json >>= valFromObj "pages"
           (revision, (JSObject page)) = head $ fromJSObject pages
           (Ok real_title) = valFromObj "title" page
-          (Ok content) = fmap head (valFromObj "revisions" page) >>= valFromObj "*"
+          (Ok source) = fmap head (valFromObj "revisions" page) >>= valFromObj "*"
           imagesNames images_array = [let (Ok image_name) = fmap fromJSString $ valFromObj "title" a in image_name | a <- images_array]
           (Ok images_names) = fmap imagesNames (valFromObj "images" page )
 
 getArticle :: ArticleReference -> IO Article
 getArticle article_ref@(ArticleReference wiki' _) = do
-    (real_title ,source, images_names) <- fmap (articleComponentsFromJSON . decode) $ getPageContent $ articleApiURL article_ref
+    (real_title , wiki_source, images_names) <- fmap (articleComponentsFromJSON . decode) $ getPageContent $ articleApiURL article_ref
     let real_article_ref = ArticleReference wiki' real_title
-    fmap (Article real_article_ref source) $ images_names `getImagesFrom` (wiki article_ref)
+    fmap (\imgs -> Article {reference = real_article_ref, source = (readMediaWiki def wiki_source), wikisource = wiki_source, images = imgs}) $ images_names `getImagesFrom` (wiki article_ref)
 
 
 templateFromJSON json = template

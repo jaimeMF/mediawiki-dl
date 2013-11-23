@@ -45,11 +45,13 @@ savers = [
 data DownloadOptions = DownloadOptions
     { outputFormat :: OutputFileFormat
     , downloadResources :: Bool
+    , debugMode :: Bool
     } deriving Show
 
 instance Default DownloadOptions where
     def = DownloadOptions { outputFormat = EPUB
                           , downloadResources = True
+                          , debugMode = False
                           }
 
 -- |Download using an intermediate temporary file if the file doesn't exist
@@ -80,8 +82,13 @@ downloadArticleResources article = do
 downloadArticle :: Article -> DownloadOptions -> IO ()
 downloadArticle article options = do
     let Just (saver, ext) = (outputFormat options) `lookup` savers
-        file_name = (title $ reference article) `addExtension` ext
-    when (downloadResources options) $ downloadArticleResources article 
+        art_title = title $ reference article
+        file_name = art_title `addExtension` ext
+        source_file_name = addExtension art_title "source"
+    when (downloadResources options) $ downloadArticleResources article
+    when (debugMode options) $ do
+        putStrLn ("Saving article source to " ++ (show source_file_name))
+        source_file_name `writeFile` (wikisource article)
     putStrLn $ "Saving article to " ++ (show file_name)
     saver file_name article
     return ()
